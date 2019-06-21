@@ -1,0 +1,52 @@
+Docker Notes:
+——————>
+Commands:
+Docker service create —replicas 2 —network overlay network here imagenamehere commandhere
+
+Docker network connect networkname containerid
+Docker network disconnect 
+Docker network create -d bridge/overlay/ nameofnetworkhere
+Docker network/image/container/..etc inspect valuehere
+Docker run -it imagehere  
+
+——————————>
+Vigrant for virtual machines deployment automation.
+
+Docker images
+Docker image ls 
+Docker ps -a
+Docker build -t tag name -f filename here . 
+Docker container run --name namehere -itd containername 
+Docker inspect 
+Docker network create
+Docker network delete
+Docker run 
+
+Docker swarm init —advertise-addr addresser
+Docker service create —name namehere —replicas 2 nameofimagehere
+
+Docker service rm 
+Docker service ls
+Docker service ps servicename 
+Docker node ls
+Docker node rm nodenamehere
+docker swarm join-token manager to list token to add manager
+docker swarm join-token worker to list token to add worker
+
+———————————>
+Services are used in docker for scaling applications purposes, Services do work in Docker swarm env.
+
+Each service can find itself if on same network created by docker, which is part of service discovery.
+
+New networks can be created and managed by docker network command.
+
+If in swarm there are total of 5 systems out of which on two the application is running on port 80, when accessed from outside the swarm it shows the application running anyway despite the fact that application is running only on two systems out of 5 because of load balancing implemented by default in docker swarm.
+
+—————————>
+Docker has bridge network be default enabled in docker networking, it is called as NAT in case of windows.
+
+Second is overlay networking, in this, you can map multiple containers under one single network, they are reachable to each other via overlay network.
+
+if one wants to use his containers as live machines on existing VLANS then MACVLAN is the choice, this gives every container its own MAC and IP address on existing VLAN thus they act as live machines, promiscious mode is pre requesite.
+
+

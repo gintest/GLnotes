@@ -1,0 +1,12 @@
+GIT 
+——————————
+
+Git init 
+Git add filename 
+Git commit -m “asanas”
+
+Git checkout branchname
+
+
+Git clone master -b branch name
+git clone https://github.com/Guavus/valhalla.git -b fix/RPC-691-698

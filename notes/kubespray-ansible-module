@@ -1,0 +1,110 @@
+site.yml for kuberspray
+---
+- name: kuberspray
+  hosts: localhost
+  roles:
+    - { role: kubesprayplaybook, tags: ["kubespray"] }
+
+- import_playbook: /root/test/cluster.yml hosts=localhost
+
+- name: master firewall ports open
+  hosts: master
+  roles:
+    - { role: master1, tags: ["master"] }
+ 
+- name: node firewall ports open
+  hosts: node
+  roles:
+    - { role: node1, tags: ["node"] }
+
+
+Playbookkubespray
+---
+# tasks file for kubesprayplaybook
+- name: Disabling SELinux on machine
+  shell: |
+     setenforce 0
+     sed -i --follow-symlinks 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/sysconfig/selinux
+
+- git:
+    repo: 'https://github.com/kubernetes-incubator/kubespray.git'
+    dest: /root/test
+
+- name: Pip install requirements for kubespray
+  pip:
+    requirements: /root/test/requirements.txt
+
+- name: copying mycluster inventory
+  copy:
+    src: /root/test/inventory/sample
+    dest: /root/test/inventory/mycluster
+    directory_mode: yes    
+
+
+Master1
+---
+# tasks file for master1
+
+- name: Opening Ports
+  firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled
+  with_items: "{{ ports }}"
+  ignore_errors: True
+
+- name: Opening 2379-2380
+  firewalld:
+    port: 2379-2380/tcp
+    permanent: yes
+    state: enabled
+
+- name: reload firewall
+  command: firewall-cmd --reload
+
+- name: modprobe br_netfilter
+  command: modprobe br_netfilter
+
+- name: iptables
+  command: echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+- name: ip forwarding
+  command: sysctl -w net.ipv4.ip_forward=1
+
+Vars:
+---
+# vars file for master1
+ports: [6443/tcp, 10250/tcp, 10251/tcp, 10252/tcp, 10255/tcp]
+
+
+Node1
+---
+# tasks file for node1
+
+- name: Opening Ports
+  firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled 
+  with_items:
+      - "{{ ports }}"
+
+- name: Opening 30000-32767
+  firewalld:
+    port: 30000-32767/tcp
+    permanent: yes
+    state: enabled
+
+- name: reload firewall
+  command: firewall-cmd --reload
+
+- name: iptables
+  command: echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables
+
+- name: ip forwarding
+  command: sysctl -w net.ipv4.ip_forward=1
+
+Vars:
+---
+# vars file for node1
+ports: [10250/tcp, 10255/tcp, 6783/tcp]

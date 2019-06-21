@@ -1,0 +1,40 @@
+VARS:
+---
+vmname: centostest
+qcowname: centos-7.4
+pathtoqcow: /root/test.qcow2
+password: "toor"
+vcpus: 2
+ram: 2024
+
+===========================================================
+
+TASKS/MAIN.YAML
+---
+- name: Fetching Centos qcow file.
+  shell: virt-builder --format qcow2 {{ qcowname }} -o {{ pathtoqcow }} --root-password password:{{ password }}
+
+- name: Creating VM
+  shell: virt-install  --name {{ vmname }} --ram {{ ram }}  --disk {{ pathtoqcow }} --import  --vcpus {{ vcpus }} --os-type linux  --os-variant centos7.0  --network bridge=virbr0 --noautoconsole --graphics vnc
+
+- name: Start VM.
+  virt:
+    name: "{{ vmname }}"
+    state: running
+
+- name: Waiting for IP setup
+  wait_for: timeout=20
+
+- name: Getting MAC of VM.
+  shell: virsh domiflist {{ vmname }} | awk 'NR == 3{print $5}'
+  register: output
+  
+- debug:
+    msg: "{{ output.stdout }}"
+
+- name: Getting IP of VM.
+  shell: ip neigh | grep -i {{ output.stdout }} | awk '{print $1}'
+  register: out
+
+- debug:
+    msg: "{{ out.stdout }}"

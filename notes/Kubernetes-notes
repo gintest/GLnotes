@@ -1,0 +1,76 @@
+kubernetes notes:
+
+kubectl port-forward deployment/
+kubectl port-forward pods/
+kubectl port-forward redis-master-765d459796-258hz 6379:6379 
+kubectl port-forward rs/
+kubectl port-forward svc/
+
+Kubectl get pods
+Kubectl get namespaces
+Kubectl describe pods 
+
+
+Creating service:
+—————————————
+kind: Service
+apiVersion: v1
+metadata:
+  name: my-service
+spec:
+  selector:
+    app: MyApp
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80
+    targetPort: 9376
+  - name: https
+    protocol: TCP
+    port: 443
+    targetPort: 9377
+
+2- kubectl expose deployment/kubernetes-bootcamp --type="NodePort" --port 8080
+
+3-kubectl expose deployment echoserver --type=NodePort
+
+4- kubectl get pv
+
+5-kubectl -n kube-system get po --watch
+
+EDITNG Deployment:
+—————————————
+KUBE_EDITOR="nano" kubectl edit deployment/nginx-deployment
+
+
+———————
+For containerd:
+root@deva-controller1:/etc# cat crictl.yaml
+runtime-endpoint: unix:///var/run/containerd/containerd.sock
+image-endpoint: ""
+timeout: 0
+debug: false
+
+
+Target-port is port where actual container services runs on
+Port in port no through which other services in cluster can access given particular service.
+NodePort is port through which outside users can access the given service.
+
+
+
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=1
+repo_gpgcheck=1
+gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+ https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+EOF
+—————————>
+ALLOW MASTER TO RUN ALL PODS:
+kubectl taint nodes --all node-role.kubernetes.io/master-
+
+
+virt-install  --name centos7setup --ram 4024  --disk path=./centos7.qcow2,size=30  --vcpus 4 --os-type linux  --os-variant centos7.0  --network bridge=virbr0 --graphics vnc --cdrom=/root/CentOS-7-x86_64-DVD-1810.iso 

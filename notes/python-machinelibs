@@ -1,0 +1,32 @@
+Machine learning LIBS Python:
+———————————————
+-Numpy 
+For numerical operations on nd arrays.
+
+-Pandas
+Used for data manipulation 
+Read/Write data from csv, db
+Convert data in data frame format
+
+-Scikitlearn
+Prebuilts algos for machine learning
+Also include some utilities functions plus also sample data for practice.
+
+-Matplotlib
+Used for plotting.
+
+5 ways to deployment:
+Lambda(aws)
+Docker
+nGrok
+ngnix
+GCP
+apache
+
+Ways to expose a function as web service python:
+1 - flask
+2- Django
+ 
+
+Automatic ML implementation:
+Amazon SageMaker

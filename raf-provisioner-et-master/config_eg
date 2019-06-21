@@ -1,0 +1,41 @@
+apiVersion: v1
+clusters:
+- cluster:
+    certificate-authority-data: 
+    server: https://192.168.122.241:6443
+  name: kubernetes
+
+#ENTRY OF REMOTE CLUSTER FIELD
+- cluster:
+    certificate-authority: /etc/kubernetes/ssl/ca.pem
+    server: https://gltest001-lb-vip.gvs.ggn:8383
+  name: local
+#ENTRY OF REMOTE CLUSTER FIELD ENDS HERE
+
+contexts:
+#ENTRY OF REMOTE CLUSTER CONTEXT FIELD
+- context:
+    cluster: local
+    user: kubelet
+  name: kubelet-reflex-platform-guri.local
+#ENTRY OF REMOTE CLUSTER CONTEXT FIELD ENDS HERE
+
+- context:
+    cluster: kubernetes
+    user: kubernetes-admin
+  name: kubernetes-admin@kubernetes
+current-context: kubernetes-admin@kubernetes
+kind: Config
+preferences: {}
+users:
+
+#ENTRY OF REMOTE CLUSTER USER FIELD
+- name: kubelet
+  user:
+    client-certificate: /etc/kubernetes/ssl/node.pem
+    client-key: /etc/kubernetes/ssl/node-key.pem
+#ENTRY OF REMOTE CLUSTER USERFIELD ENDS HERE
+
+- name: kubernetes-admin
+  user:
+    client-certificate-data: ....

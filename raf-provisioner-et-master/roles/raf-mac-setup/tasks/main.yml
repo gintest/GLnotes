@@ -1,0 +1,269 @@
+---
+# tasks file for raf-mac
+
+- name: Installing required packages
+  homebrew:
+    name: ['https://raw.githubusercontent.com/kadwanev/bigboybrew/master/Library/Formula/sshpass.rb', 'xhyve']
+    state: present
+
+- name: Copying files in HOME
+  copy:
+     src: "{{item}}"
+     dest: ${HOME}
+     mode: +x
+  with_items:
+     ['run.sh','initramfs-3.10.0-957.el7.x86_64.img','vmlinuz-3.10.0-957.el7.x86_64']
+
+- name: Fetching image from artifactory
+  get_url: 
+    url: "{{ art_url }}"
+    dest: /tmp/hdd.zip
+
+- name: Extracting HDD for Bastion 
+  unarchive:
+    src: /tmp/hdd.zip
+    dest: ${HOME}
+
+- name: Deleting hdd.zip from /tmp
+  file:
+    path: /tmp/hdd.zip
+    state: absent
+
+- name: Setting up CentOS VM
+  command: sudo ${HOME}/run.sh 
+  
+- name: Waiting for Bastion to come up
+  wait_for: timeout=20
+
+- name: Getting IP of Bastion VM
+  shell: netstat -nr | grep 16.b9.5.f8.7c.3b | awk '{print $1}'
+  register: out
+
+- debug:
+    msg: "{{ out.stdout }}"
+
+- name: Creating ssh keys
+  shell: echo -e 'y\n' |  ssh-keygen -b 2048 -t rsa -f ${HOME}/.ssh/id_rsa -q -N ""
+  ignore_errors: yes
+
+- name: Adding to known_hosts
+  shell: ssh-keyscan -H {{ out.stdout }} >> ${HOME}/.ssh/known_hosts
+
+- name: Copying SSH Files
+  shell: sshpass -p {{ password }}  ssh-copy-id root@{{ out.stdout }}
+
+- name: Disabling SElinux
+  selinux:
+        state: disabled
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Opening Required Ports
+  firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    immediate: yes
+    state:  enabled
+  with_items:
+    - 6443/tcp
+    - 2379-2380/tcp
+    - 10250/tcp
+    - 10251/tcp
+    - 10252/tcp
+    - 10255/tcp
+    - 44134/tcp
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Adding modprobe 
+  shell: "modprobe br_netfilter"
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Iptable Setting 
+  shell: "echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables"
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Creating file for repo
+  file:
+     path: /etc/yum.repos.d/kubernetes.repo
+     state: touch
+     mode: 755
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Adding kubernetes repo information 
+  blockinfile:
+        path: /etc/yum.repos.d/kubernetes.repo
+        block: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+                 https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Adding epel
+  command: yum install epel-release -y
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Kubeadm and Docker binary install 
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+      - git
+      - yum-utils   
+      - kubeadm
+      - python-pip
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name : Adding Docker Repos
+  shell: "{{ item }}"
+  with_items:
+        - yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        - yum-config-manager --enable docker-ce-nightly
+        - yum-config-manager --enable docker-ce-test         
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Installing Docker
+  yum:
+    name: "{{ packages }}"
+  vars:
+     packages:
+       - docker-ce
+       - docker-ce-cli
+       - containerd.io
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Starting Docker Engine 
+  service:
+        name: docker 
+        state: started 
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Remove swapfile from /etc/fstab
+  mount:
+    name: swap
+    fstype: swap
+    state: absent
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Disabling swap
+  command: swapoff -a
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Starting kubeadm
+  shell: kubeadm init
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Configuring Kubernetes 
+  script: kube.sh
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Setting up HELM Binary
+  script: get_helm.sh
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Creating Roles for HELM
+  script: helm_settings.sh
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+
+- name: Adding HELM_HOST in the bashrc
+  lineinfile:
+        dest: ~/.bashrc 
+        line: "{{ item }}" 
+        insertafter: EOF 
+        state: present
+  with_items:
+        - "export HELM_HOST={{ out.stdout }}:44134"
+  delegate_to: "{{ out.stdout }}"   
+  remote_user: root
+
+- name: Exporting HELM_HOST
+  shell: export HELM_HOST={{ out.stdout }}:44134
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Starting Tiller
+  shell: "(tiller -listen {{ out.stdout }}:44134 -storage memory -trace >/dev/null 2>&1 &)"
+  async: 10
+  poll: 2
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Adding Bitnami Repo 
+  command: helm repo add bitnami https://charts.bitnami.com/bitnami
+  retries: 3
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Deploying kubeapps
+  command: "helm install --set tillerProxy.host={{ out.stdout }}:44134  --set frontend.service.type=LoadBalancer --name kubeapps --namespace kubeapps bitnami/kubeapps"
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Removing Taint on K8s
+  command: "kubectl taint nodes --all node-role.kubernetes.io/master-"
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name:	Waiting for Docker Compose to start
+  wait_for: timeout=20
+
+- name: Installing Docker Compose
+  shell: curl -L "https://github.com/docker/compose/releases/download/1.23.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Fetching ChartM UI Repo
+  git:
+    repo: https://github.com/chartmuseum/ui.git
+    dest: /root/ChartMUI
+  delegate_to: "{{ out.stdout }}"
+  remote_user: root
+
+- name: Replacing data in docker-compose.yml
+  replace:
+      path: /root/ChartMUI/docker-compose.yaml
+      regexp: '8080:8080'
+      replace: "9090:8080"
+  delegate_to:  "{{ out.stdout }}"
+  remote_user: root
+  retries: 3
+
+- name: Installing docker-comp pip
+  pip:
+    name: "{{ packages }}"
+    state: present
+  vars:
+     packages:
+       - docker-compose
+  delegate_to:  "{{ out.stdout }}"
+  remote_user: root
+  retries: 3
+
+- name: Firing up ChartMUI
+  docker_service:
+     project_src: /root/ChartMUI
+     build: yes
+  delegate_to:  "{{ out.stdout }}"
+  remote_user: root
+  retries: 3

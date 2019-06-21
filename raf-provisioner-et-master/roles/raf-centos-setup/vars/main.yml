@@ -1,0 +1,19 @@
+---
+
+vmname: centostestg
+netw: virbr0    ### network interface 
+
+#Name of os
+qcowname: centos-7.4
+
+#Name and path of qcow file
+pathtoqcow: /root/qcowvms/testg.qcow2
+
+#Name and path of qcow file to be generated after resizing
+pathtoqcow_n: /root/qcowvms/testg2.qcow2
+
+#password for the vm
+password: "toor"
+
+vcpus: 2
+ram: 6024

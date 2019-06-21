@@ -1,0 +1,4 @@
+---
+# vars file for raf-mac
+password: toor
+art_url: http://192.168.105.111/ggn-archive/centos/7.6.1810/hdd.zip

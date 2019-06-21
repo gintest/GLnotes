@@ -1,0 +1,42 @@
+@Library('jenkins_lib')_
+pipeline {
+  agent any
+  stages {
+  stage("Define Release version"){
+      steps {
+      script {
+        versionDefine()
+        }
+      }
+    }
+    stage("Build rpm") {
+      steps {
+        echo "Building..."
+        sh "./build_rpm.sh ${VERSION} ${RELEASE}"
+      }
+    }
+
+    stage("RPM PUSH"){
+    steps{
+    script{
+        echo "Building..."
+          rpm_push( env.buildType, 'dist', 'ggn-dev-rpms/ET-reflex-provisioner' )
+    }}}
+
+stage("DEPLOY"){
+    steps{
+        script {
+
+       
+         sh  'ssh -o StrictHostKeyChecking=no siguavus@192.168.133.221 "sudo yum remove -y  reflex-platform-et*|| true"'
+         sh 'ssh -o StrictHostKeyChecking=no siguavus@192.168.133.221 "sudo rpm -ivh http://artifacts.ggn.in.guavus.com:8081/artifactory/ggn-dev-rpms/ET-reflex-provisioner/${VERSION}/${REL_ENV}/reflex-platform-et-${VERSION}-${RELEASE}.x86_64.rpm"'
+ 
+         sh 'ssh -o StrictHostKeyChecking=no siguavus@192.168.133.221 "sudo sh "'
+         sh  'ssh -o StrictHostKeyChecking=no siguavus@192.168.133.221 "sudo yum remove -y  reflex-platform-et*|| true"' 
+
+        
+        }
+    }
+
+  }
+}

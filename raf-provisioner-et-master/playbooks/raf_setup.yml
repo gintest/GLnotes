@@ -1,0 +1,5 @@
+---
+- hosts: localhost
+  roles:
+    - { role: "raf-mac-setup" }
+   #- { role: "raf-centos-setup" }

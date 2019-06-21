@@ -1,0 +1,255 @@
+---
+- name: check bridge present | Play will terminate here if bridge not present
+  shell: brctl show | grep -w virbr0
+  register: ps
+
+- name: installing | installing the required software
+  become: yes
+  yum:
+    name: "{{ packages }}"
+    state: latest
+  vars:
+        packages:
+                - libguestfs-tools
+                - libvirt
+                - qemu-kvm
+                - virt-manager
+                - virt-install
+                - virt-viewer
+                - libguestfs-xfs
+  notify: enable_service
+
+- name: Fetching Centos qcow file.
+  shell: virt-builder --format qcow2 {{ qcowname }} -o {{ pathtoqcow }} --root-password password:{{ password }}
+
+- name: Increasing size of VM
+  shell: |
+    truncate -r {{ pathtoqcow }} {{ pathtoqcow_n }}
+    truncate -s +15G {{ pathtoqcow_n }}
+    virt-resize --expand /dev/sda3 {{ pathtoqcow }} {{ pathtoqcow_n }}
+    
+- name: Creating VM
+  shell: virt-install  --name {{ vmname }} --ram {{ ram }}  --disk {{ pathtoqcow_n }} --import  --vcpus {{ vcpus }} --os-type linux  --os-variant centos7.0  --network bridge={{ netw }} --noautoconsole --graphics vnc
+
+- name: Starting VM.
+  virt:
+    name: "{{ vmname }}"
+    state: running
+
+- name: Waiting for IP setup
+  wait_for: timeout=20
+
+- name: Getting MAC of VM.
+  shell: virsh domiflist {{ vmname }} | awk 'NR == 3{print $5}'
+  register: output
+  
+- debug:
+    msg: "{{ output.stdout }}"
+
+- name: Getting IP of VM.
+  shell: ip neigh | grep -i {{ output.stdout }} | awk '{print $1}'
+  register: out
+
+- debug:
+    msg: "{{ out.stdout }}"
+
+- name: Creating ssh keys
+  shell: echo -e 'y\n' |  ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""
+
+- name: Adding to known_hosts
+  shell: ssh-keyscan -H {{ out.stdout }} >> ~/.ssh/known_hosts
+
+- name: Copying SSH Files
+  shell: sshpass -p {{ password }}  ssh-copy-id root@{{ out.stdout }}
+
+- name: Set hostname
+  hostname:
+        name: k8.master
+  delegate_to: "{{ out.stdout }}"
+
+- name: Disabling SElinux
+  selinux:
+        state: disabled
+  delegate_to: "{{ out.stdout }}"
+
+- name: Opening Required Ports
+  firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    immediate: yes
+    state:  enabled
+  with_items:
+    - 6443/tcp
+    - 2379-2380/tcp
+    - 10250/tcp
+    - 10251/tcp
+    - 10252/tcp
+    - 10255/tcp
+    - 44134/tcp
+  delegate_to: "{{ out.stdout }}"
+
+- name: Adding modprobe 
+  shell: "modprobe br_netfilter"
+  delegate_to: "{{ out.stdout }}"
+
+- name: Iptable Setting 
+  shell: "echo '1' > /proc/sys/net/bridge/bridge-nf-call-iptables"
+  delegate_to: "{{ out.stdout }}"
+
+- name: Creating file for repo
+  file:
+     path: /etc/yum.repos.d/kubernetes.repo
+     state: touch
+     mode: 755
+  delegate_to: "{{ out.stdout }}"
+
+- name: Adding kubernetes repo information 
+  blockinfile:
+        path: /etc/yum.repos.d/kubernetes.repo
+        block: |
+          [kubernetes]
+          name=Kubernetes
+          baseurl=https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+          enabled=1
+          gpgcheck=1
+          repo_gpgcheck=1
+          gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg
+                 https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+  delegate_to: "{{ out.stdout }}"
+
+- name: Adding epel
+  command: yum install epel-release -y
+  delegate_to: "{{ out.stdout }}"
+
+- name: Kubeadm and Docker binary install 
+  yum:
+    name: "{{ packages }}"
+  vars:
+    packages:
+      - git
+      - yum-utils   
+      - device-mapper-persistent-data   
+      - lvm2
+      - kubeadm
+      - openssl
+      - python-pip
+  delegate_to: "{{ out.stdout }}"
+
+- name : Adding Docker Repos
+  shell: "{{ item }}"
+  with_items:
+        - yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+        - yum-config-manager --enable docker-ce-nightly
+        - yum-config-manager --enable docker-ce-test         
+  delegate_to: "{{ out.stdout }}"
+
+- name: Installing Docker
+  yum:
+    name: "{{ packages }}"
+  vars:
+     packages:
+       - docker-ce
+       - docker-ce-cli
+       - containerd.io
+  delegate_to: "{{ out.stdout }}"
+
+- name: Starting Docker Engine 
+  service:
+        name: docker 
+        state: started 
+  delegate_to: "{{ out.stdout }}"
+
+- name: Remove swapfile from /etc/fstab
+  mount:
+    name: swap
+    fstype: swap
+    state: absent
+  delegate_to: "{{ out.stdout }}"
+
+- name: Disabling swap
+  command: swapoff -a
+  delegate_to: "{{ out.stdout }}"
+
+- name: Starting kubeadm
+  shell: kubeadm init
+  delegate_to: "{{ out.stdout }}"
+
+- name: Configuring Kubernetes 
+  script: kube.sh
+  delegate_to: "{{ out.stdout }}"
+
+- name: Setting up HELM Binary
+  script: get_helm.sh
+  delegate_to: "{{ out.stdout }}"
+
+- name: Creating Roles for HELM
+  script: helm_settings.sh
+  delegate_to: "{{ out.stdout }}"
+
+- name: Adding HELM_HOST in the bashrc
+  lineinfile:
+        dest: ~/.bashrc 
+        line: "{{ item }}" 
+        insertafter: EOF 
+        state: present
+  with_items:
+        - "export HELM_HOST={{ out.stdout }}:44134"
+  delegate_to: "{{ out.stdout }}"   
+
+- name: Exporting HELM_HOST
+  shell: export HELM_HOST={{ out.stdout }}:44134
+  delegate_to: "{{ out.stdout }}"
+
+- name: Starting Tiller
+  shell: "(tiller -listen {{ out.stdout }}:44134 -storage memory -trace >/dev/null 2>&1 &)"
+  async: 10
+  poll: 2
+  delegate_to: "{{ out.stdout }}"
+
+- name: Adding Bitnami Repo 
+  command: helm repo add bitnami https://charts.bitnami.com/bitnami
+  retries: 3
+  delegate_to: "{{ out.stdout }}"
+
+- name: Deploying kubeapps
+  command: "helm install --set tillerProxy.host={{ out.stdout }}:44134  --set frontend.service.type=LoadBalancer --name kubeapps --namespace kubeapps bitnami/kubeapps"
+  delegate_to: "{{ out.stdout }}"
+
+- name: Removing Taint on K8s
+  command: "kubectl taint nodes --all node-role.kubernetes.io/master-"
+  delegate_to: "{{ out.stdout }}"
+
+- name:	Waiting for Docker Compose to start
+  wait_for: timeout=20
+
+- name: Installing Docker Compose
+  shell: curl -L "https://github.com/docker/compose/releases/download/1.23.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose && chmod +x /usr/local/bin/docker-compose
+  delegate_to: "{{ out.stdout }}"
+
+- name: Fetching ChartM UI Repo
+  git:
+    repo: https://github.com/chartmuseum/ui.git
+    dest: /root/ChartMUI
+  delegate_to: "{{ out.stdout }}"
+
+- name: Replacing data in docker-compose.yml
+  replace:
+      path: /root/ChartMUI/docker-compose.yaml
+      regexp: '8080:8080'
+      replace: "9090:8080"
+  delegate_to:  "{{ out.stdout }}"
+
+- name: Installing docker-comp pip
+  pip:
+    name: "{{ packages }}"
+    state: present
+  vars:
+     packages:
+       - docker-compose
+  delegate_to:  "{{ out.stdout }}"
+
+- name: Firing up ChartMUI
+  docker_service:
+     project_src: /root/ChartMUI
+     build: yes
+  delegate_to:  "{{ out.stdout }}"

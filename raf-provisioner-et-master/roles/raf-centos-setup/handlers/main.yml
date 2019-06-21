@@ -1,0 +1,8 @@
+---
+# handlers file for setup
+- name: enable_service
+  sudo: yes
+  service: 
+    enabled: yes
+    name: libvirtd
+    state: started

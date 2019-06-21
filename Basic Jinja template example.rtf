@@ -1,59 +1,46 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1561\cocoasubrtf600
-{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;}
-{\colortbl;\red255\green255\blue255;\red38\green38\blue38;\red242\green242\blue242;\red27\green29\blue31;
-\red235\green236\blue237;}
-{\*\expandedcolortbl;;\cssrgb\c20000\c20000\c20000;\cssrgb\c96078\c96078\c96078;\cssrgb\c14118\c15294\c16078;
-\cssrgb\c93725\c94118\c94510;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww10800\viewh8400\viewkind0
-\deftab720
-\pard\pardeftab720\sl360\partightenfactor0
+- hosts: all
+  vars:
+    variable_to_be_replaced: 'Hello world'
+    inline_variable: 'hello again'
+  tasks:
+    - name: Ansible Template Example
+      template:
+        src: hello_world.j2
+        dest: /Users/mdtutorials2/Documents/Ansible/hello_world.txt
 
-\f0\fs26 \cf2 \cb3 \expnd0\expndtw0\kerning0
-\outl0\strokewidth0 \strokec2 - hosts: all\
-  vars:\
-    variable_to_be_replaced: 'Hello world'\
-    inline_variable: 'hello again'\
-  tasks:\
-    - name: Ansible Template Example\
-      template:\
-        src: hello_world.j2\
-        dest: /Users/mdtutorials2/Documents/Ansible/hello_world.txt\
-\
-hello_world.j2\
---------------\
-\{\{ variable_to_be_replaced \}\}\
-This line won't be changed\
-Variable given as inline - \{\{ inline_variable \}\} - :)\
-\
-output - hello_world.txt\
-------\
-Hello world\
-This line won't be changed\
-Variable given as inline - hello again - :)\
-\
-\
-advanced example:\
-\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\'97\
-Vars folder:\
-\pard\pardeftab720\sl300\partightenfactor0
-\cf4 \cb5 \strokec4 ---\
-users:\
-  - Mike\
-  - Smith\
-  - Klara\
-  - Alex\
-\
-\
-Jinja template:\
-\{% if users is defined and users %\}\
-\{% for user in users %\}\{\{ user \}\}\
-\{% endfor %\}\
-\{% endif %\}\
-\
-Main:\
----\
-- hosts: 127.0.0.1\
-  tasks:\
-  - name: Test jinja2template\
-    template: src=test.j2 dest=test.conf\
-}
+hello_world.j2
+--------------
+{{ variable_to_be_replaced }}
+This line won't be changed
+Variable given as inline - {{ inline_variable }} - :)
+
+output - hello_world.txt
+------
+Hello world
+This line won't be changed
+Variable given as inline - hello again - :)
+
+
+advanced example:
+—————————————
+Vars folder:
+---
+users:
+  - Mike
+  - Smith
+  - Klara
+  - Alex
+
+
+Jinja template:
+{% if users is defined and users %}
+{% for user in users %}{{ user }}
+{% endfor %}
+{% endif %}
+
+Main:
+---
+- hosts: 127.0.0.1
+  tasks:
+  - name: Test jinja2template
+    template: src=test.j2 dest=test.conf

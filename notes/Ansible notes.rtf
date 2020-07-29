@@ -38,7 +38,7 @@ tasks:
       notify: "restart web services"
 
 
----->LOOPS
+<b>---->LOOPS</b>
 - name: add several users
   user:
     name: "{{ item }}"
@@ -57,6 +57,7 @@ tasks:
     - { name: 'testuser1', groups: 'wheel' }
     - { name: 'testuser2', groups: 'root' }
 
+---> with_items in replaced by loop
 - name: count our fruit
   debug:
     msg: "{{ item }} with index {{ my_idx }}"
@@ -70,9 +71,10 @@ tasks:
 - name: with_items
   debug:
     msg: "{{ item }}"
-  with_items: "{{ items }}" (with_items in replaced by loop:)
+  with_items: "{{ items }}"
   
- With_indexed_items is replaced by index_var and Loop:- 
+  
+---> With_indexed_items is replaced by index_var and Loop:- 
  - name: with_indexed_items
   debug:
     msg: "{{ item.0 }} - {{ item.1 }}"

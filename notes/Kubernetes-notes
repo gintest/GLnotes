@@ -1,13 +1,27 @@
 kubernetes notes:
 
-kubectl port-forward deployment/
-kubectl port-forward pods/
+Applying Kubernetes Deployment:- 
+kubectl apply -f https://k8s.io/examples/application/guestbook/redis-master-deployment.yaml
+
+Listing pods:- 
+kubectl get pods
+
+Listing Deployments:- 
+kubectl get deployment
+
+Listing Replica Set:- 
+kubectl get replicaset
+
+Exposing Local port to Port on Pod:- (first is local port)
 kubectl port-forward redis-master-765d459796-258hz 6379:6379 
-kubectl port-forward rs/
+
+Exposing Local port to Port on Pod(in service):-
 kubectl port-forward svc/
 
-Kubectl get pods
+Listing namespaces :- 
 Kubectl get namespaces
+
+Getting Deplyoment info of pods:- 
 Kubectl describe pods 
 
 
@@ -30,9 +44,15 @@ spec:
     port: 443
     targetPort: 9377
 
+Creating Service:- 
+Kubctl apply -f servicename.yaml 
+
+Listing Service:- 
+kubectl get service redis-master
+
 2- kubectl expose deployment/kubernetes-bootcamp --type="NodePort" --port 8080
 
-3-kubectl expose deployment echoserver --type=NodePort
+3- kubectl expose deployment echoserver --type=NodePort
 
 4- kubectl get pv
 

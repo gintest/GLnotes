@@ -1,0 +1,104 @@
+class windows_high_perf_setting {
+/*
+   * This module enables high performance setting for windows server
+   */
+   
+   $vardir = regsubst($::puppet_vardir, "/", "\\",'G')
+   
+      exec { 'highperf':
+      command => "cmd.exe /c powercfg.exe /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c > $vardir\\high_perf_applied.txt",
+      path    => "$::path",
+      provider  =>  'windows',
+      unless =>  "cmd.exe /c \"dir /s $vardir\\high_perf_applied.txt\"", 
+    }
+}
+
+
+PUPPET FACTER TO CHECK VALUE OF REG KEY :- 
+Facter.add(:check) do
+confine :osfamily => :windows
+setcode do
+begin
+value = nil
+Win32::Registry::HKEY_LOCAL_MACHINE.open('SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU') do |regkey|
+value = regkey['NoAutoUpdate']
+if value == "0"
+value = "true"
+else
+value = "false"
+end
+end
+value
+rescue
+nil
+end
+end
+end
+
+
+PUPPET FACTER FOR LINUX :-
+Facter.add(:linux_patrol_installed) do
+  confine :kernel => :linux 
+    setcode do
+      Facter::Core::Execution.execute("[ -f /opt/bmc/truesight_executed.txt ] && echo true || echo false")
+    end  
+end
+
+
+PUPPET FACTER FOR WINDOWS :- 
+Facter.add(:flex_installed) do
+  confine :kernel => :windows 
+    setcode do
+      Facter::Core::Execution.execute("cmd.exe /c \"wmic path Win32_InstalledWin32Program | findstr /I flex >nul 2>nul && echo true || echo false\"")
+    end  
+end
+
+
+class windows_cv{
+  $powershell = 'C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -NoProfile -NoLogo -NonInteractive'
+  
+  if ($::cv_installed == 'false') and ($::dsosettings_cv_check == 'true'){    
+    
+   exec{ 'Ensuring Temp':
+      command => "$powershell New-Item -ItemType Directory -Force -Path C:\\Temp\\cv"
+   }->  
+    
+    file { 'Transfering zip for CV':
+      path => "C:/Temp/cv/CustomPackageLocation.zip",
+      source => 'puppet:///modules/windows_cv/CustomPackageLocation.zip',
+    }->
+    
+    file { 'C://Temp/cv/unzip.exe':
+    source => 'puppet:///modules/windows_cv/unzip.exe',
+    }->
+    
+    exec { "extracting CV zip":
+     cwd => 'C:/Temp',
+     command => "C:\\Temp\\cv\\unzip.exe -o C:\\Temp\\cv\\CustomPackageLocation.zip -d C:\\Temp\\cv\\",
+     }->
+     
+    exec{'Installing Agent':    
+      command => "$powershell cd C:\\Temp\\cv\\CustomPackageLocation\\ ;; C:\\Temp\\cv\\CustomPackageLocation\\CustomPackageLocation_WinX64.exe /s /install /silent",
+      timeout => 2000,  
+    }
+  }      
+}
+
+class windows_wercrashdump{
+  
+  if ($::dumpcheck == "false"){
+   registry_key { 'Creating localdump':
+    ensure => present,
+    path   => 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps',
+   }->
+  
+  registry_value { 'Setting crash dump value':
+    ensure => present,
+    path   => 'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\Windows Error Reporting\LocalDumps\DumpCount',
+    type  => dword,
+    data  => '10',
+   }  
+
+ }
+  
+}

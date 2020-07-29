@@ -62,6 +62,8 @@ EDITNG Deployment:
 —————————————
 KUBE_EDITOR="nano" kubectl edit deployment/nginx-deployment
 
+Using Kubespray:- 
+https://dzone.com/articles/kubernetes-113-installation-using-kubespray
 
 ———————
 For containerd:

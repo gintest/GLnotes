@@ -6,8 +6,8 @@ Docker service create —replicas 2 —network overlay network here imagenameher
 Docker network connect networkname containerid
 Docker network disconnect 
 Docker network create -d bridge/overlay/ nameofnetworkhere
-Docker network/image/container/..etc inspect valuehere
-Docker run -it imagehere  
+Docker network/image/container/..etc inspect namehere
+Docker run -it imagehere (runs container in interactive (-i))
 
 ——————————>
 Vigrant for virtual machines deployment automation.
@@ -16,7 +16,7 @@ Docker images
 Docker image ls 
 Docker ps -a
 Docker build -t tag name -f filename here . 
-Docker container run --name namehere -itd containername 
+Docker container run --name namehere -itd containername (-d for deattached mode will run in background)
 Docker inspect 
 Docker network create
 Docker network delete
@@ -35,18 +35,43 @@ docker swarm join-token worker to list token to add worker
 
 ———————————>
 Services are used in docker for scaling applications purposes, Services do work in Docker swarm env.
-
 Each service can find itself if on same network created by docker, which is part of service discovery.
-
 New networks can be created and managed by docker network command.
-
 If in swarm there are total of 5 systems out of which on two the application is running on port 80, when accessed from outside the swarm it shows the application running anyway despite the fact that application is running only on two systems out of 5 because of load balancing implemented by default in docker swarm.
 
 —————————>
 Docker has bridge network be default enabled in docker networking, it is called as NAT in case of windows.
-
 Second is overlay networking, in this, you can map multiple containers under one single network, they are reachable to each other via overlay network.
-
 if one wants to use his containers as live machines on existing VLANS then MACVLAN is the choice, this gives every container its own MAC and IP address on existing VLAN thus they act as live machines, promiscious mode is pre requesite.
 
+------------>
+EXAMPLE OF DOCKER FILE
+# Use the official image as a parent image.
+FROM node:current-slim
+# Set the working directory.
+WORKDIR /usr/src/app
+# Copy the file from your host to your current location.
+COPY package.json .
+# Run the command inside your image filesystem.
+RUN npm install
+# Add metadata to the image to describe which port the container is listening on at runtime.
+EXPOSE 8080
+# Run the specified command within the container.
+CMD [ "npm", "start" ]
+# Copy the rest of your app's source code from your host to your image filesystem.
+COPY . .
 
+
+---------------------->
+STEPS to build docker image and run it :- 
+git clone https://github.com/dockersamples/node-bulletin-board
+cd node-bulletin-board/bulletin-board-app
+
+docker build --tag bulletinboard:1.0 .
+
+docker run --publish 8000:8080 --detach --name bb bulletinboard:1.0
+--publish asks Docker to forward traffic incoming on the host’s port 8000 to the container’s port 8080
+container is started with name 'bb'
+
+docker rm --force bb (to deleted container)
+docker stop bb (to stop container)

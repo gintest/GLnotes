@@ -1,5 +1,12 @@
 Ansible Decision making:
 ——————————————————
+- shell: echo "{{ item }}"
+  loop:
+    - one
+    - two
+  register: echo
+  changed_when: echo.stdout != "one"
+  
 - name: Check if foo is installed
   command: dpkg-query -l foo
   register: deb_check
@@ -8,8 +15,14 @@ Ansible Decision making:
   command: somescript
   when: deb_check.stdout.find('no packages found') != -1
 
+- shell: /usr/bin/foo
+  register: result
+  until: result.stdout.find("all systems go") != -1
+  retries: 5
+  delay: 10
 
-Handlers:
+
+----> Handlers
 
 handlers:
     - name: restart memcached
@@ -25,6 +38,105 @@ tasks:
       notify: "restart web services"
 
 
+---->LOOPS
+- name: add several users
+  user:
+    name: "{{ item }}"
+    state: present
+    groups: "wheel"
+  loop:
+     - testuser1
+     - testuser2
+     
+- name: add several users
+  user:
+    name: "{{ item.name }}"
+    state: present
+    groups: "{{ item.groups }}"
+  loop:
+    - { name: 'testuser1', groups: 'wheel' }
+    - { name: 'testuser2', groups: 'root' }
+
+- name: count our fruit
+  debug:
+    msg: "{{ item }} with index {{ my_idx }}"
+  loop:
+    - apple
+    - banana
+    - pear
+  loop_control:
+    index_var: my_idx
+    
+- name: with_items
+  debug:
+    msg: "{{ item }}"
+  with_items: "{{ items }}" (with_items in replaced by loop:)
+  
+ With_indexed_items is replaced by index_var and Loop:- 
+ - name: with_indexed_items
+  debug:
+    msg: "{{ item.0 }} - {{ item.1 }}"
+  with_indexed_items: "{{ items }}"
+
+- name: with_indexed_items -> loop
+  debug:
+    msg: "{{ index }} - {{ item }}"
+  loop: "{{ items|flatten(levels=1) }}"
+  loop_control:
+    index_var: index
+    
+--->with_together is replaced by loop and the zip filter.
+- name: with_together
+  debug:
+    msg: "{{ item.0 }} - {{ item.1 }}"
+  with_together:
+    - "{{ list_one }}"
+    - "{{ list_two }}"
+
+- name: with_together -> loop
+  debug:
+    msg: "{{ item.0 }} - {{ item.1 }}"
+  loop: "{{ list_one|zip(list_two)|list }}" 
+
+---> with_nested and with_cartesian are replaced by loop and the product filter.
+- name: with_nested
+  debug:
+    msg: "{{ item.0 }} - {{ item.1 }}"
+  with_nested:
+    - "{{ list_one }}"
+    - "{{ list_two }}"
+
+- name: with_nested -> loop
+  debug:
+    msg: "{{ item.0 }} - {{ item.1 }}"
+  loop: "{{ list_one|product(list_two)|list }}"
+
+--->with_random_choice is replaced by just use of the random filter, without need of loop.
+- name: with_random_choice
+  debug:
+    msg: "{{ item }}"
+  with_random_choice: "{{ my_list }}"
+
+- name: with_random_choice -> loop (No loop is needed here)
+  debug:
+    msg: "{{ my_list|random }}"
+  tags: random
+  
+---->with_dict can be substituted by loop and either the dictsort or dict2items filters.
+- name: with_dict
+  debug:
+    msg: "{{ item.key }} - {{ item.value }}"
+  with_dict: "{{ dictionary }}"
+
+- name: with_dict -> loop (option 1)
+  debug:
+    msg: "{{ item.key }} - {{ item.value }}"
+  loop: "{{ dictionary|dict2items }}"
+
+- name: with_dict -> loop (option 2)
+  debug:
+    msg: "{{ item.0 }} - {{ item.1 }}"
+  loop: "{{ dictionary|dictsort }}"
 
 Setting up VM:
 Enable all repos 

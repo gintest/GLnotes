@@ -1,8 +1,12 @@
 Docker Notes:
 ——————>
 Commands:
-Docker service create —replicas 2 —network overlay network here imagenamehere commandhere
 
+The docker exec command runs a new command in a running container.
+docker exec -ti my_container "echo a && echo b" 
+docker exec -ti my_container "bash" 
+
+Docker service create —replicas 2 —network overlay network here imagenamehere commandhere
 Docker network connect networkname containerid
 Docker network disconnect 
 Docker network create -d bridge/overlay/ nameofnetworkhere

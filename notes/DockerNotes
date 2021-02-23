@@ -79,3 +79,87 @@ container is started with name 'bb'
 
 docker rm --force bb (to deleted container)
 docker stop bb (to stop container)
+
+
+docker ps -a listing process
+docker exec -it containeridhere "command tobe exec here in container"
+
+docker container run --name test -it imagenamehere to run separate container from existing image on system, --rm will enable docker to delete container once it is stopped, --hostname to specify hostname for the machine, --dns for dns, --mac-address, --add-host to add entry in hosts in docker container
+
+docker inspect to inspect container and network, -f to select certain field from json format to be printed in terminal
+
+docker start containeridhere to start container, docker stop to stop container, docker restart
+docker history to know history for docker image
+docker rm to delete docker image/container
+
+docker run --restart=on-failure:10 redis will restart container on failure, docker run --restart=always redis will restart always
+
+we can specify costum n/w setting for containers via docker run command, following are the switches to be used :- 
+
+--dns=[]           : Set custom dns servers for the container
+--network="bridge" : Connect a container to a network
+                      'bridge': create a network stack on the default Docker bridge
+                      'none': no networking
+                      'container:<name|id>': reuse another container's network stack
+                      'host': use the Docker host network stack
+                      '<network-name>|<network-id>': connect to a user-defined network
+--network-alias=[] : Add network-scoped alias for the container
+--add-host=""      : Add a line to /etc/hosts (host:IP)
+--mac-address=""   : Sets the container's Ethernet device's MAC address
+--ip=""            : Sets the container's Ethernet device's IPv4 address
+--ip6=""           : Sets the container's Ethernet device's IPv6 address
+--link-local-ip=[] : Sets one or more container's Ethernet device's link local IPv4/IPv6 
+
+costum IPs can only be given on user created networks.
+
+
+we can reserve memory and cpu to be used in docker run:- 
+
+-m, --memory=""	Memory limit (format: <number>[<unit>]). Number is a positive integer. Unit can be one of b, k, m, or g. Minimum is 4M.
+--memory-swap=""	Total memory limit (memory + swap, format: <number>[<unit>]). Number is a positive integer. Unit can be one of b, k, m, or g.
+--memory-reservation=""	Memory soft limit (format: <number>[<unit>]). Number is a positive integer. Unit can be one of b, k, m, or g.
+--kernel-memory=""	Kernel memory limit (format: <number>[<unit>]). Number is a positive integer. Unit can be one of b, k, m, or g. Minimum is 4M.
+-c, --cpu-shares=0	CPU shares (relative weight)
+--cpus=0.000	Number of CPUs. Number is a fractional number. 0.000 means no limit.
+
+env variable in container can be set through -e in docker run
+
+we can do health check for container by following switches
+--health-cmd            Command to run to check health
+  --health-interval       Time between running the check
+  --health-retries        Consecutive failures needed to report unhealthy
+  --health-timeout        Maximum time to allow one check to run
+  --health-start-period   Start period for the container to initialize before starting health-retries countdown
+  --no-healthcheck        Disable any container-specified HEALTHCHECK
+  
+the value for the same after container is running can be checked by docker inspect command and specifying field in -f 
+
+docker run -d --tmpfs /run:rw,noexec,nosuid,size=65536k my_image for mount options in container
+--user=[ user | user:group | uid | uid:gid | user:gid | uid:group ] in docker run to create specific user/groups in container
+-w="", --workdir="": Working directory inside the container
+
+
+we can access file outside of docker by docker volume.
+docker run -v volumename:/tobe mapped inside container
+
+building a image in docker and costum naming it :- 
+docker build -t myimage:latest -<<EOF
+FROM busybox
+RUN echo "hello world"
+EOF
+
+docker commit command to create docker image out of container
+
+docker cp filenamehere containername:pathtocopyfileto , this enable to copy files from localsytem to container
+
+docker diff checks the file changes on container
+
+docker stats for displaying stats 
+
+Mapping docker volume hello to world dirtectory inside container
+docker run -d -v hello:/world busybox ls /world
+
+
+docker secret to create enrypted form of secrets for docker to use
+
+docker service is basically deployment of container in slave nodes in swarm

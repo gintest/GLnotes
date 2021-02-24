@@ -163,3 +163,10 @@ docker run -d -v hello:/world busybox ls /world
 docker secret to create enrypted form of secrets for docker to use
 
 docker service is basically deployment of container in slave nodes in swarm
+
+Example of dockerfile----->
+FROM  busybox
+RUN  mkdir test
+TOUCH test.yaml
+COPY  test.yaml test/
+

@@ -40,3 +40,16 @@ variable "instance_name" {
 }
 
 we can use variable in main file as "var.description" from above file.
+
+To get output, create outputs.tf file, then add following data in it:- 
+output "instance_id" {
+  description = "ID of the EC2 instance"
+  value       = aws_instance.example.id
+}
+
+output "instance_public_ip" {
+  description = "Public IP address of the EC2 instance"
+  value       = aws_instance.example.public_ip
+}
+
+it will give output while terraform execution.

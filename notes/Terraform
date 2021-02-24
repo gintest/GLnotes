@@ -1,0 +1,42 @@
+TERRAFORM:- 
+terraform apply to apply configuration
+aws creds are stored in .aws/credentails directory
+
+there are two terraform files, 1- main.tf, variable.tf
+
+main.tf contains the main configuration code, variable.tf contains the variables to be fed into main file.
+
+Example of teraaform configuration:- 
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 3.27"
+    }
+  }
+}
+
+provider "aws" {
+  profile = "default"
+  region  = "us-west-2"
+}
+
+resource "aws_instance" "example" {
+  ami           = "ami-830c94e3"
+  instance_type = "t2.micro"
+
+  tags = {
+    Name = "ExampleInstance"
+  }
+}
+
+EXAMPLE of variable.tf:- 
+
+variable "instance_name" {
+  description = "Value of the Name tag for the EC2 instance"
+  type        = string
+  default     = "ExampleInstance"
+}
+
+we can use variable in main file as "var.description" from above file.
